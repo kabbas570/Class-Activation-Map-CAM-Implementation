@@ -10,3 +10,18 @@ Class Activation Maps (CAM) is a method to visualize and get insights into a Con
 Identifying exactly which regions of an image are being used for discrimination 
 
 ![Picture3](https://user-images.githubusercontent.com/56618776/105805405-441f8d00-5fe5-11eb-92a0-829a8bf8ed86.png)
+
+## CAM Arcgitecture 
+
+![image](https://user-images.githubusercontent.com/56618776/105805825-2c94d400-5fe6-11eb-99c8-24549152d53a.png)
+
+
+## Results
+
+![Picture4](https://user-images.githubusercontent.com/56618776/105805988-7978aa80-5fe6-11eb-8d07-b3cf75e1c266.png)
+
+## CAM Paper
+
+The CAM paper is avaialabe at :
+
+https://arxiv.org/pdf/1512.04150.pdf
