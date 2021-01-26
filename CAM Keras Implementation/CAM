@@ -1,0 +1,172 @@
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID";
+# The GPU id to use, usually either "0" or "1";
+os.environ["CUDA_VISIBLE_DEVICES"] = "2";
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from tensorflow.compat.v1.keras.backend import set_session
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True  # dynamically grow the memory used on the GPU
+config.log_device_placement = True  # to log device placement (on which device the operation ran)
+sess = tf.compat.v1.Session(config=config)
+set_session(sess)
+from tensorflow.keras import optimizers
+import tensorflow.keras as keras
+import tensorflow.keras.backend as K
+
+
+
+from Models import Model
+model= Model()  
+model.summary()
+
+
+epochs=50
+batch_size=10
+
+### DATASET ###
+seed=2020
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+
+
+Data_datagen=ImageDataGenerator(rescale=1./255) #included in our dependencies
+train_generator=Data_datagen.flow_from_directory('train_full/',
+                                                 target_size=(224,224),
+                                                 color_mode='rgb',
+                                                 batch_size=1,
+                                                 class_mode='categorical',
+                                                 shuffle=True)
+
+g=next(train_generator)
+plt.figure()
+plt.imshow(g[0][2,:,:,:])
+   ####  MODEL #####
+def Loss_clas(y_true, y_pred):
+
+    alpha_factor = K.ones_like(y_true) * 0.25
+    alpha_factor = tf.where(K.equal(y_true, 1), alpha_factor, 1 - alpha_factor)
+    focal_weight = tf.where(K.equal(y_true, 1), 1 - y_pred, y_pred)
+    focal_weight = alpha_factor * focal_weight ** 2
+    cls_loss = focal_weight * K.binary_crossentropy(y_true, y_pred)
+    normalizer = K.cast(K.shape(y_pred)[1], K.floatx())
+    normalizer = K.maximum(K.cast_to_floatx(1.0), normalizer)
+
+    class_=K.sum(cls_loss) / normalizer
+
+    return class_
+
+
+model.compile(lr=0.001,optimizer="adam", loss=Loss_clas, metrics=["acc"])
+model.fit_generator(generator=train_generator,steps_per_epoch=621/batch_size,epochs=epochs)
+model.save_weights("MODELF2.h5")
+
+
+
+
+#### Testing #####
+model.load_weights("MODELF2.h5")
+batch_size=1
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+train_datagen=ImageDataGenerator(rescale=1./255) #included in our dependencies
+test_generator=train_datagen.flow_from_directory('Test_Data/',
+                                                 target_size=(224,224),
+                                                 color_mode='rgb',
+                                                 batch_size=batch_size,
+                                                 class_mode='categorical',
+                                                 shuffle=False)
+g=next(test_generator)
+plt.figure()
+plt.imshow(g[0][0,:,:,:])
+
+
+#model.compile(optimizer="adam", loss='categorical_crossentropy', metrics=["acc"])
+
+model.evaluate_generator(test_generator,41)  ## Quanitative Analysis
+
+
+
+model.load_weights("MODELn.h5")
+
+import cv2
+import numpy as np
+im1=cv2.imread('/home/user01/data_ssd/Abbas/Dog_Work/Train_Data/10/imgs/2.png')
+im1 = cv2.resize(im1, (224,224), interpolation = cv2.INTER_AREA)
+im1=cv2.cvtColor(im1, cv2.COLOR_BGR2RGB)
+im1=im1/255
+im1 = np.expand_dims(im1, axis=0)
+im1=np.float32(im1)
+R1=model.predict(im1)
+
+model1 = keras.models.Model(inputs=model.inputs, outputs=model.layers[19].output)
+model1.summary()
+#result1=model1.predict_generator(test_generator,41)  ## Quanitative Analysis
+
+result1=model1.predict(im1)  ## Quanitative Analysis
+
+
+for i in range(len(model.layers)):
+	layer = model.layers[i]
+	# check for convolutional layer
+	# summarize output shape
+	print(i, layer.name, layer.output.shape)
+    
+
+weights, biases = model.layers[24].get_weights()
+
+Feature_map=result1[0,:,:,:]
+
+
+# weights # has shape of [512,number of classes]
+# Feature_map # has shape [14,14,512]
+# clas_index # a number say 13 class
+# iput_img_4_channel # [batch,width,height,cahnnels]  (0-1) range
+
+clas_index=6
+def Generate_CAM(weights,Feature_map,clas_index,iput_img_4_channel):
+    W=weights[:,clas_index]
+    heat_map=np.zeros([14,14])
+    for i in range(512):
+        dot_product=Feature_map[:,:,i].dot(W[i])
+        heat_map=heat_map+dot_product
+    
+    heat_map = heat_map - np.min(heat_map)
+    heat_map = heat_map / np.max(heat_map)
+    heat_map = np.uint8(255 * heat_map)
+    cam=cv2.resize(heat_map, (224,224))       
+    cam=cv2.merge((cam,cam,cam))
+    cam = cv2.applyColorMap(cam, cv2.COLORMAP_JET)
+    
+    input_img = iput_img_4_channel[0,:,:,:]*255
+    input_img=input_img.astype(np.uint8)
+    
+    CAM_= cv2.addWeighted(input_img,0.8,cam,0.2,0)
+    return CAM_
+
+CAM=Generate_CAM(weights,Feature_map,clas_index,im1)
+
+
+plt.figure()
+plt.imshow(CAM)
+
+plt.figure()
+plt.imshow(im1[0,:,:,:])
+
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
