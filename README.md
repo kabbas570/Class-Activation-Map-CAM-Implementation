@@ -11,7 +11,7 @@ Identifying exactly which regions of an image are being used for discrimination 
 
 ![Picture3](https://user-images.githubusercontent.com/56618776/105806551-89dd5500-5fe7-11eb-9523-3389dd6b0e67.png)
 
-## CAM Arcgitecture 
+## CAM Architecture 
 
 ![image](https://user-images.githubusercontent.com/56618776/105805825-2c94d400-5fe6-11eb-99c8-24549152d53a.png)
 
